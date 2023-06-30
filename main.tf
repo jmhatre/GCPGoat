@@ -7,14 +7,17 @@ data "google_billing_account" "acct" {
 }
 
 resource "google_project" "my_project" {
-  name       = "Gcp-Goat"
-  project_id = "gcp-goat-${random_id.bucket_prefix.hex}"
+  name            = "Gcp-Goat"
+  project_id      = "gcp-goat-${random_id.bucket_prefix.hex}"
   billing_account = data.google_billing_account.acct.id
+  labels = {
+    user = "pchandaliya"
+  }
 }
 
 variable "region" {
-  type        = string
-  default     = "us-west1"
+  type    = string
+  default = "us-west1"
 }
 
 provider "google" {
@@ -31,6 +34,9 @@ resource "google_storage_bucket" "data_bucket" {
   depends_on = [
     google_project.my_project
   ]
+  labels = {
+    user = "pchandaliya"
+  }
 }
 # Prod Bucket
 resource "google_storage_bucket" "dev_bucket" {
@@ -42,11 +48,14 @@ resource "google_storage_bucket" "dev_bucket" {
   depends_on = [
     google_project.my_project
   ]
+  labels = {
+    user = "pchandaliya"
+  }
 }
 
 resource "google_project_iam_custom_role" "prod-role" {
   role_id     = "prodbucket"
-  project       = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   title       = "Prod role"
   description = "Used for prod buckets"
   permissions = ["storage.objects.get"]
@@ -60,10 +69,10 @@ resource "google_storage_bucket_iam_member" "add_policy_role" {
 # Dev Bucket
 resource "google_project_iam_custom_role" "dev-role" {
   role_id     = "development"
-  project       = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   title       = "Dev role"
   description = "Used for dev buckets"
-  permissions = ["storage.objects.get", "storage.buckets.setIamPolicy","storage.buckets.getIamPolicy"]
+  permissions = ["storage.objects.get", "storage.buckets.setIamPolicy", "storage.buckets.getIamPolicy"]
 }
 
 resource "google_storage_bucket_iam_member" "add_policy_role2" {
@@ -75,31 +84,31 @@ resource "google_storage_bucket_iam_member" "add_policy_role2" {
 # populate data
 
 resource google_project_service "firestore" {
-  service = "firestore.googleapis.com"
+  service                    = "firestore.googleapis.com"
   disable_dependent_services = true
-  project = google_project.my_project.project_id
+  project                    = google_project.my_project.project_id
   depends_on = [
     google_project.my_project
   ]
 }
 
 resource "google_app_engine_application" "app" {
-  location_id = "us-central"
+  location_id   = "us-central"
   database_type = "CLOUD_FIRESTORE"
-  project = google_project.my_project.project_id
+  project       = google_project.my_project.project_id
   depends_on = [
     google_project_service.firestore
   ]
 }
 
 locals {
-    user_data = jsondecode(file("modules/module-1/resources/firestore/users.json"))
+  user_data = jsondecode(file("modules/module-1/resources/firestore/users.json"))
 }
 resource "google_firestore_document" "user_doc_1" {
   collection  = "users"
   document_id = "my-doc-1"
   fields      = jsonencode(local.user_data["1"])
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_storage_bucket.data_bucket,
     google_app_engine_application.app
@@ -109,7 +118,7 @@ resource "google_firestore_document" "user_doc_2" {
   collection  = "users"
   document_id = "my-doc-2"
   fields      = jsonencode(local.user_data["2"])
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.user_doc_1
   ]
@@ -118,7 +127,7 @@ resource "google_firestore_document" "user_doc_3" {
   collection  = "users"
   document_id = "my-doc-3"
   fields      = jsonencode(local.user_data["3"])
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.user_doc_2
   ]
@@ -127,7 +136,7 @@ resource "google_firestore_document" "user_doc_4" {
   collection  = "users"
   document_id = "my-doc-4"
   fields      = jsonencode(local.user_data["4"])
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.user_doc_3
   ]
@@ -136,7 +145,7 @@ resource "google_firestore_document" "user_doc_5" {
   collection  = "users"
   document_id = "my-doc-5"
   fields      = jsonencode(local.user_data["5"])
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.user_doc_4
   ]
@@ -145,7 +154,7 @@ resource "google_firestore_document" "user_doc_6" {
   collection  = "users"
   document_id = "my-doc-6"
   fields      = jsonencode(local.user_data["6"])
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.user_doc_5
   ]
@@ -154,7 +163,7 @@ resource "google_firestore_document" "user_doc_7" {
   collection  = "users"
   document_id = "my-doc-7"
   fields      = jsonencode(local.user_data["7"])
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.user_doc_6
   ]
@@ -190,7 +199,7 @@ resource "google_firestore_document" "blog_post_1" {
         }
     }
   EOT
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.user_doc_7
   ]
@@ -198,7 +207,7 @@ resource "google_firestore_document" "blog_post_1" {
 resource "google_firestore_document" "blog_post_2" {
   collection  = "blogs"
   document_id = "2"
-    fields      = <<EOT
+  fields      = <<EOT
   {
         "id": {
             "stringValue": "2"
@@ -226,7 +235,7 @@ resource "google_firestore_document" "blog_post_2" {
         }
     }
   EOT
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.blog_post_1
   ]
@@ -234,7 +243,7 @@ resource "google_firestore_document" "blog_post_2" {
 resource "google_firestore_document" "blog_post_3" {
   collection  = "blogs"
   document_id = "3"
-      fields      = <<EOT
+  fields      = <<EOT
   {
         "id": {
             "stringValue": "3"
@@ -262,7 +271,7 @@ resource "google_firestore_document" "blog_post_3" {
         }
     }
   EOT
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.blog_post_2
   ]
@@ -270,7 +279,7 @@ resource "google_firestore_document" "blog_post_3" {
 resource "google_firestore_document" "blog_post_4" {
   collection  = "blogs"
   document_id = "4"
-        fields      = <<EOT
+  fields      = <<EOT
   {
         "id": {
             "stringValue": "4"
@@ -298,7 +307,7 @@ resource "google_firestore_document" "blog_post_4" {
         }
     }
   EOT
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.blog_post_3
   ]
@@ -306,7 +315,7 @@ resource "google_firestore_document" "blog_post_4" {
 resource "google_firestore_document" "blog_post_5" {
   collection  = "blogs"
   document_id = "5"
-       fields      = <<EOT
+  fields      = <<EOT
 {
         "id": {
             "stringValue": "5"
@@ -334,7 +343,7 @@ resource "google_firestore_document" "blog_post_5" {
         }
     }
   EOT
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.blog_post_4
   ]
@@ -342,7 +351,7 @@ resource "google_firestore_document" "blog_post_5" {
 resource "google_firestore_document" "blog_post_6" {
   collection  = "blogs"
   document_id = "6"
-       fields      = <<EOT
+  fields      = <<EOT
 {
         "id": {
             "stringValue": "6"
@@ -370,7 +379,7 @@ resource "google_firestore_document" "blog_post_6" {
         }
     }
   EOT
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.blog_post_5
   ]
@@ -378,7 +387,7 @@ resource "google_firestore_document" "blog_post_6" {
 resource "google_firestore_document" "blog_post_7" {
   collection  = "blogs"
   document_id = "7"
-         fields      = <<EOT
+  fields      = <<EOT
 {
         "id": {
             "stringValue": "7"
@@ -406,7 +415,7 @@ resource "google_firestore_document" "blog_post_7" {
         }
     }
   EOT
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.blog_post_6
   ]
@@ -414,7 +423,7 @@ resource "google_firestore_document" "blog_post_7" {
 resource "google_firestore_document" "blog_post_8" {
   collection  = "blogs"
   document_id = "8"
-         fields      = <<EOT
+  fields      = <<EOT
   {
         "id": {
             "stringValue": "8"
@@ -442,7 +451,7 @@ resource "google_firestore_document" "blog_post_8" {
         }
     }
   EOT
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.blog_post_7
   ]
@@ -450,7 +459,7 @@ resource "google_firestore_document" "blog_post_8" {
 resource "google_firestore_document" "blog_post_9" {
   collection  = "blogs"
   document_id = "9"
-         fields      = <<EOT
+  fields      = <<EOT
   {
         "id": {
             "stringValue": "9"
@@ -478,7 +487,7 @@ resource "google_firestore_document" "blog_post_9" {
         }
     }
   EOT
-  project = google_project.my_project.project_id
+  project     = google_project.my_project.project_id
   depends_on = [
     google_firestore_document.blog_post_8
   ]
@@ -494,6 +503,9 @@ resource "google_storage_bucket" "function_bucket" {
   depends_on = [
     google_project.my_project
   ]
+  labels = {
+    user = "pchandaliya"
+  }
 }
 
 
@@ -524,8 +536,8 @@ resource "google_project_service" "cloud_function_api" {
 
 # Enable Cloud Build API
 resource "google_project_service" "cloud_build_api" {
-  project = google_project.my_project.project_id
-  service = "cloudbuild.googleapis.com"
+  project                    = google_project.my_project.project_id
+  service                    = "cloudbuild.googleapis.com"
   disable_dependent_services = true
   disable_on_destroy         = true
   depends_on = [
@@ -534,8 +546,8 @@ resource "google_project_service" "cloud_build_api" {
 }
 
 resource "google_project_service" "cloud_ar_api" {
-  project = google_project.my_project.project_id
-  service = "artifactregistry.googleapis.com"
+  project                    = google_project.my_project.project_id
+  service                    = "artifactregistry.googleapis.com"
   disable_dependent_services = true
   disable_on_destroy         = true
   depends_on = [
@@ -578,7 +590,7 @@ resource "google_cloudfunctions_function" "backend-function" {
   trigger_http = true
   environment_variables = {
     BUCKET_NAME = google_storage_bucket.function_bucket.name,
-    JWT_SECRET = "T2BYL6#]zc>Byuzu"
+    JWT_SECRET  = "T2BYL6#]zc>Byuzu"
   }
 
   depends_on = [
@@ -589,6 +601,9 @@ resource "google_cloudfunctions_function" "backend-function" {
     google_project_service.cloud_run_api,
     google_project_service.cloud_build_api
   ]
+  labels = {
+    user = "pchandaliya"
+  }
 }
 
 resource "google_cloudfunctions_function_iam_member" "backend-invoker" {
@@ -614,6 +629,9 @@ resource "google_storage_bucket" "blog" {
     response_header = ["*"]
     max_age_seconds = 3600
   }
+  labels = {
+    user = "pchandaliya"
+  }
 }
 
 resource "null_resource" "file_replacement_upload" {
@@ -629,9 +647,9 @@ EOF
 }
 
 resource "google_storage_bucket_iam_member" "blog_member" {
-  bucket   = google_storage_bucket.blog.name
-  role     = "roles/storage.objectViewer"
-  member   = "allUsers"
+  bucket = google_storage_bucket.blog.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"
 }
 
 locals {
@@ -681,11 +699,14 @@ data "archive_file" "file_function_app" {
 }
 
 resource "google_storage_bucket" "bucket" {
-  project       = google_project.my_project.project_id
-  force_destroy = true
-  name     = "blog-frontend-${random_id.bucket_prefix.hex}"
-  location = "US"
+  project                     = google_project.my_project.project_id
+  force_destroy               = true
+  name                        = "blog-frontend-${random_id.bucket_prefix.hex}"
+  location                    = "US"
   uniform_bucket_level_access = true
+  labels = {
+    user = "pchandaliya"
+  }
 }
 
 resource "google_storage_bucket_object" "object" {
@@ -699,14 +720,14 @@ resource "google_storage_bucket_object" "object" {
 
 # Create Cloud Function
 resource "google_cloudfunctions_function" "function" {
-  name    = "blogapp-${random_id.bucket_prefix.hex}"
-  runtime = "nodejs12" # Switch to a different runtime if needed
-  project       = google_project.my_project.project_id
+  name                  = "blogapp-${random_id.bucket_prefix.hex}"
+  runtime               = "nodejs12" # Switch to a different runtime if needed
+  project               = google_project.my_project.project_id
   available_memory_mb   = 128
   source_archive_bucket = google_storage_bucket.bucket.name
   source_archive_object = google_storage_bucket_object.object.name
   trigger_http          = true
-  entry_point           = "httpServer" 
+  entry_point           = "httpServer"
   environment_variables = {
     BUCKET_NAME = "${google_storage_bucket.data_bucket.name}/webfiles"
   }
@@ -718,6 +739,9 @@ resource "google_cloudfunctions_function" "function" {
     google_project_service.cloud_run_api,
     google_project_service.cloud_build_api
   ]
+  labels = {
+    user = "pchandaliya"
+  }
 }
 
 # Create IAM entry so all users can invoke the function
@@ -733,8 +757,8 @@ resource "google_cloudfunctions_function_iam_member" "invoker" {
 #VM Deployment
 # enable compute API
 variable "gcp_service_list" {
-  description ="Projectof apis"
-  type = list(string)
+  description = "Projectof apis"
+  type        = list(string)
   default = [
     "compute.googleapis.com",
     "serviceusage.googleapis.com"
@@ -744,7 +768,7 @@ variable "gcp_service_list" {
 resource "google_project_service" "gcp-serv" {
   for_each = toset(var.gcp_service_list)
   project  = google_project.my_project.project_id
-  service = each.key
+  service  = each.key
 }
 
 # create VPC
@@ -752,7 +776,7 @@ resource "google_compute_network" "vpc" {
   name                    = "vm-vpc"
   auto_create_subnetworks = "true"
   routing_mode            = "GLOBAL"
-  project       = google_project.my_project.project_id
+  project                 = google_project.my_project.project_id
   depends_on = [
     google_project_service.gcp-serv
   ]
@@ -762,13 +786,13 @@ resource "google_compute_network" "vpc" {
 resource "google_compute_firewall" "allow-ssh" {
   name    = "vm-fw-allow-ssh"
   network = google_compute_network.vpc.name
-  project       = google_project.my_project.project_id
+  project = google_project.my_project.project_id
   allow {
     protocol = "tcp"
     ports    = ["22"]
   }
   source_ranges = ["0.0.0.0/0"]
-  target_tags = ["ssh"]
+  target_tags   = ["ssh"]
 }
 
 variable "ubuntu_1804_sku" {
@@ -785,7 +809,7 @@ variable "linux_instance_type" {
 
 
 data "template_file" "linux-metadata" {
-template = <<EOF
+  template = <<EOF
 #!/bin/bash
 sudo useradd -m justin
 wget -c https://storage.googleapis.com/${google_storage_bucket.data_bucket.name}/shared/files/.ssh/keys/justin.pub -P /home/justin
@@ -803,7 +827,7 @@ EOF
 }
 
 data "google_compute_default_service_account" "default" {
-  project       = google_project.my_project.project_id
+  project = google_project.my_project.project_id
   depends_on = [
     google_project_service.gcp-serv
   ]
@@ -812,7 +836,7 @@ data "google_compute_default_service_account" "default" {
 resource "google_compute_instance" "vm_instance_public" {
   name         = "developer-vm"
   machine_type = var.linux_instance_type
-  project       = google_project.my_project.project_id
+  project      = google_project.my_project.project_id
   zone         = "us-west1-c"
   tags         = ["ssh"]
   boot_disk {
@@ -822,17 +846,20 @@ resource "google_compute_instance" "vm_instance_public" {
   }
   metadata_startup_script = data.template_file.linux-metadata.rendered
   network_interface {
-    network       = google_compute_network.vpc.name
-    access_config { }
+    network = google_compute_network.vpc.name
+    access_config {}
   }
   service_account {
     email  = data.google_compute_default_service_account.default.email
-    scopes = ["compute-rw","https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring.write","https://www.googleapis.com/auth/pubsub","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/trace.append"]
+    scopes = ["compute-rw", "https://www.googleapis.com/auth/devstorage.read_only", "https://www.googleapis.com/auth/logging.write", "https://www.googleapis.com/auth/monitoring.write", "https://www.googleapis.com/auth/pubsub", "https://www.googleapis.com/auth/service.management.readonly", "https://www.googleapis.com/auth/servicecontrol", "https://www.googleapis.com/auth/trace.append"]
   }
   depends_on = [
     google_project_service.gcp-serv,
     google_storage_bucket_object.data
   ]
+  labels = {
+    user = "pchandaliya"
+  }
 }
 
 resource "null_resource" "file_replacement_config" {
@@ -849,7 +876,7 @@ EOF
 
 resource "google_service_account" "sa" {
   account_id   = "admin-service-account"
-  project       = google_project.my_project.project_id
+  project      = google_project.my_project.project_id
   display_name = "A service account for admin"
 }
 
@@ -864,7 +891,7 @@ resource "google_project_iam_member" "owner_binding" {
 resource "google_compute_instance" "vm_instance_admin" {
   name         = "admin-vm"
   machine_type = var.linux_instance_type
-  project       = google_project.my_project.project_id
+  project      = google_project.my_project.project_id
   zone         = "us-west1-c"
   tags         = ["ssh"]
   boot_disk {
@@ -873,8 +900,8 @@ resource "google_compute_instance" "vm_instance_admin" {
     }
   }
   network_interface {
-    network       = google_compute_network.vpc.name
-    access_config { }
+    network = google_compute_network.vpc.name
+    access_config {}
   }
   service_account {
     email  = google_service_account.sa.email
@@ -884,6 +911,9 @@ resource "google_compute_instance" "vm_instance_admin" {
     google_project_service.gcp-serv,
     google_service_account.sa
   ]
+  labels = {
+    user = "pchandaliya"
+  }
 }
 
 resource "null_resource" "file_replacement_rollback" {
